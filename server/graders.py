@@ -67,7 +67,8 @@ def grade(
         # If markers remain, we still check the rest for partial credit
         # but file is definitely not done
         total = sum(partial.values())
-        return round(total, 2), " | ".join(reasons), partial
+        clamped_score = round(0.01 + (total * 0.98), 3)
+        return clamped_score, " | ".join(reasons), partial
 
     # 2. Valid syntax (for Python files)
     if language == "python":
@@ -95,4 +96,6 @@ def grade(
         reasons.append("Does not exactly match expected resolution (+0.0)")
 
     total = min(1.0, sum(partial.values()))
-    return round(total, 2), " | ".join(reasons), partial
+    # Map [0, 1] -> [0.01, 0.99] to satisfy "strictly between 0 and 1" requirement
+    clamped_score = round(0.01 + (total * 0.98), 3)
+    return clamped_score, " | ".join(reasons), partial

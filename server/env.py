@@ -78,11 +78,11 @@ class GitConflictEnv:
         self._last_score = score
         self._total_reward += reward_val
 
-        done = score >= 1.0 or self._step >= MAX_STEPS
+        done = score >= 0.98 or self._step >= MAX_STEPS
         self._done = done
 
         # Build feedback for next observation
-        last_error = None if score >= 1.0 else grade_reason
+        last_error = None if score >= 0.98 else grade_reason
 
         obs = self._build_obs(last_error=last_error)
         obs.last_attempt = resolved

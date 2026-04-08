@@ -45,9 +45,9 @@ def compute_reward(
         reasons.append("First clean (no markers) → +0.10")
 
     # --- Perfect score bonus ---
-    if current_score >= 1.0:
+    if current_score >= 0.98:
         reward += 0.25
-        reasons.append("Perfect resolution → +0.25")
+        reasons.append("Near-perfect resolution bonus → +0.25")
 
     # --- Stagnation penalty ---
     if (
@@ -62,5 +62,6 @@ def compute_reward(
     reward -= step_cost
     reasons.append(f"Step cost → -{step_cost:.3f}")
 
-    reward = max(0.0, min(1.0, round(reward, 3)))
+    # Map [0, 1] -> [0.01, 0.99]
+    reward = round(0.01 + (max(0.0, min(1.0, reward)) * 0.98), 3)
     return reward, " | ".join(reasons)

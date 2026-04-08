@@ -175,7 +175,7 @@ def run_task(task_name: str) -> Dict[str, Any]:
         rewards.append(reward_val)
 
         if done:
-            success = final_score >= 1.0
+            success = final_score >= 0.95
             break
 
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)

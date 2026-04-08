@@ -1,0 +1,64 @@
+name: git-conflict-resolver
+version: "1.0.0"
+description: >
+  An RL environment where AI agents learn to resolve Git merge conflicts.
+  The agent receives a file containing conflict markers (<<<<<<<, =======, >>>>>>>)
+  and must produce a clean, correctly resolved version of the file.
+  Tasks range from resolving a single obvious conflict to combining additive
+  changes from both branches in a semantically correct way.
+
+author: "Agent Smith"
+license: MIT
+tags:
+  - openenv
+  - git
+  - code-review
+  - software-engineering
+  - conflict-resolution
+
+tasks:
+  - name: single_conflict
+    difficulty: easy
+    description: "Resolve a single Git conflict block by accepting the correct incoming change."
+  - name: multi_conflict
+    difficulty: medium
+    description: "Resolve three conflict blocks, each requiring a different resolution strategy."
+  - name: logic_conflict
+    difficulty: hard
+    description: "Resolve two conflict blocks by combining additive changes from both branches."
+
+action_space:
+  type: text
+  description: "The agent outputs the full resolved file content as a string."
+
+observation_space:
+  type: structured
+  fields:
+    - task_name: string
+    - task_description: string
+    - filename: string
+    - file_language: string
+    - conflicted_content: string
+    - branch_ours: string
+    - branch_theirs: string
+    - num_conflicts: integer
+    - last_attempt: string (nullable)
+    - last_error: string (nullable)
+    - step: integer
+    - max_steps: integer
+    - done: boolean
+
+reward:
+  type: float
+  range: [0.0, 1.0]
+  shaped: true
+  description: >
+    Shaped reward per step. Components include:
+    improvement bonus (score delta), marker-free bonus,
+    perfect-match bonus, stagnation penalty, and step cost.
+
+endpoints:
+  reset: POST /reset
+  step: POST /step
+  state: GET /state
+  health: GET /health

@@ -89,3 +89,14 @@ def step(action: ConflictAction):
 def state():
     """Return the current internal state of the environment."""
     return env.state()
+
+def main(host: str = "0.0.0.0", port: int | None = None):
+    import uvicorn
+    import os
+    if port is None:
+        port = int(os.getenv("API_PORT", "7860"))
+    uvicorn.run(app, host=host, port=port)
+
+if __name__ == "__main__":
+    main()
+

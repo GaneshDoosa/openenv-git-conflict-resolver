@@ -111,83 +111,92 @@ def build_user_prompt(obs: Dict) -> str:
 # ── Agent loop ────────────────────────────────────────────────────────────────
 
 def run_task(task_name: str) -> Dict[str, Any]:
-    obs = env_reset(task_name)
     model_short = MODEL_NAME.split("/")[-1]
-
     print(f"[START] task={task_name} env={BENCHMARK} model={model_short}", flush=True)
 
     rewards: List[float] = []
     final_score = 0.0
     success = False
+    steps_taken = 0
 
-    for step_num in range(1, MAX_STEPS + 1):
-        # Build messages
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user",   "content": build_user_prompt(obs)},
-        ]
+    try:
+        obs = env_reset(task_name)
 
-        # Call LLM
-        try:
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=messages,
-                temperature=0.2,
-                max_tokens=2048,
-            )
-            resolved = response.choices[0].message.content.strip()
-        except Exception as e:
-            resolved = obs.get("conflicted_content", "")
-            error_msg = str(e)
-        else:
-            error_msg = None
+        for step_num in range(1, MAX_STEPS + 1):
+            # Build messages
+            messages = [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user",   "content": build_user_prompt(obs)},
+            ]
 
-        # Submit action to env
-        try:
-            step_resp = env_step(resolved)
-        except Exception as e:
+            # Call LLM
+            try:
+                response = client.chat.completions.create(
+                    model=MODEL_NAME,
+                    messages=messages,
+                    temperature=0.2,
+                    max_tokens=2048,
+                )
+                resolved = response.choices[0].message.content.strip()
+            except Exception as e:
+                resolved = obs.get("conflicted_content", "")
+                error_msg = str(e)
+            else:
+                error_msg = None
+
+            # Submit action to env
+            try:
+                step_resp = env_step(resolved)
+            except Exception as e:
+                print(
+                    f"[STEP] step={step_num} action=<env_error> reward=0.00 "
+                    f"done=false error={str(e)[:80]}",
+                    flush=True,
+                )
+                steps_taken = step_num
+                break
+
+            reward_val = step_resp["reward"]["value"]
+            done       = step_resp["done"]
+            info       = step_resp.get("info", {})
+            final_score = info.get("score", 0.0)
+            obs        = step_resp["observation"]
+
+            # Truncate action for log line (keep it single-line)
+            action_preview = resolved[:60].replace("\n", "\\n")
+            error_log = error_msg[:80] if error_msg else "null"
+
             print(
-                f"[STEP] step={step_num} action=<env_error> reward=0.00 "
-                f"done=false error={str(e)[:80]}",
+                f"[STEP] step={step_num} "
+                f"action={action_preview!r} "
+                f"reward={reward_val:.2f} "
+                f"done={'true' if done else 'false'} "
+                f"error={error_log}",
                 flush=True,
             )
-            break
 
-        reward_val = step_resp["reward"]["value"]
-        done       = step_resp["done"]
-        info       = step_resp.get("info", {})
-        final_score = info.get("score", 0.0)
-        obs        = step_resp["observation"]
+            rewards.append(reward_val)
+            steps_taken = step_num
 
-        # Truncate action for log line (keep it single-line)
-        action_preview = resolved[:60].replace("\n", "\\n")
-        error_log = error_msg[:80] if error_msg else "null"
+            if done:
+                success = final_score >= 0.95
+                break
 
+    except Exception as e:
+        print(f"[DEBUG] Task error: {e}", flush=True)
+
+    finally:
+        rewards_str = ",".join(f"{r:.2f}" for r in rewards)
         print(
-            f"[STEP] step={step_num} "
-            f"action=\"{action_preview}...\" "
-            f"reward={reward_val:.2f} "
-            f"done={'true' if done else 'false'} "
-            f"error={error_log}",
+            f"[END] success={'true' if success else 'false'} "
+            f"steps={steps_taken} "
+            f"score={final_score:.2f} "
+            f"rewards={rewards_str}",
             flush=True,
         )
 
-        rewards.append(reward_val)
+    return {"task": task_name, "score": final_score, "success": success, "steps": steps_taken}
 
-        if done:
-            success = final_score >= 0.95
-            break
-
-    rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    print(
-        f"[END] success={'true' if success else 'false'} "
-        f"steps={len(rewards)} "
-        f"score={final_score:.2f} "
-        f"rewards={rewards_str}",
-        flush=True,
-    )
-
-    return {"task": task_name, "score": final_score, "success": success, "steps": len(rewards)}
 
 
 # ── Main entry point ──────────────────────────────────────────────────────────

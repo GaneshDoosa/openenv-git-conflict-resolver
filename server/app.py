@@ -9,6 +9,15 @@ Endpoints:
   GET  /tasks  — list available tasks
 """
 
+import sys
+from pathlib import Path
+
+# Ensure server/ directory is in sys.path so modules can be imported
+# whether running from repo root (openenv validate) or inside Docker (/app)
+_SERVER_DIR = Path(__file__).resolve().parent
+if str(_SERVER_DIR) not in sys.path:
+    sys.path.insert(0, str(_SERVER_DIR))
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -45,7 +54,7 @@ env = GitConflictEnv()
 @app.get("/health")
 def health():
     """Liveness check — must return 200 for HF Space validation."""
-    return {"status": "ok", "env": "git-conflict-resolver"}
+    return {"status": "healthy", "service": "git-conflict-resolver"}
 
 
 @app.get("/tasks")

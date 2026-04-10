@@ -18,3 +18,12 @@ __pycache__/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Hackathon research files (not part of submission)
+*.pdf
+hackathon_*.txt
+hackathon_*.pdf
+problem_statement.txt
+
+# Leftover subdirectory
+openenv-git-conflict-resolver/
